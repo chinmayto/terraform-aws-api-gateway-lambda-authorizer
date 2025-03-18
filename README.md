@@ -3,7 +3,7 @@
 
 ### Introduction
 
-In an earlier post, we explored deploying a REST API using API Gateway, AWS Lambda, DynamoDB, and Terraform. The architecture consisted of:
+In an [earlier post](https://dev.to/chinmay13/deploying-a-serverless-architecture-with-rest-api-using-api-gateway-lambda-dynamodb-and-terraform-4g57), we explored deploying a REST API using API Gateway, AWS Lambda, DynamoDB, and Terraform. The architecture consisted of:
 1. An API Gateway exposing the REST API endpoints.
 2. AWS Lambda handling backend logic.
 3. DynamoDB serving as the database.
@@ -27,6 +27,8 @@ JWTs are widely used in authentication flows, where a client receives a token up
 
 ### Architecture
 Follwing is the serverless architecture we will be dealing with.
+
+![alt text](/images/diagram.png)
 
 ## Step 1: Create Lambda IAM Role with Lambda Function
 We setup required IAM Role for Lambda Function to access DynamoDB to perform CRUD operations.
@@ -362,10 +364,10 @@ resource "aws_dynamodb_table_item" "books" {
 }
 ```
 
-### Step 3: Setup API Gateway with required methonds
+### Step 3: Setup API Gateway with required methonds, resources, stage, authorizer
 The API Gateway functions as a proxy, forwarding incoming HTTP requests from the client to the Lambda function using a POST request.
 
-API Gateway methods will have "CUSTOM" Authorization with a lambda authorizer attached to it (created in step 4).
+API Gateway methods will have "CUSTOM" Authorization with a lambda authorizer attached to it (see step 4).
 
 ```terraform
 ################################################################################
@@ -939,7 +941,45 @@ Apply complete! Resources: 46 added, 0 changed, 0 destroyed.
 ```
 
 ### Testing
+Lambda Function and Lambda Authorizer Functions:
 
+![alt text](/images/lambda_functions.png)
+
+API Resource with Authorizer defined:
+
+![alt text](/images/api_gateway_resource.png)
+
+`Token` Based authorizer for API with token source as `authorizationToken`
+
+![alt text](/images/lambda_authorizer.png)
+
+Build JWT using onling JWT Builder using secret key:
+
+![alt text](/images/jwt_build.png)
+
+Check online whether JWT is valid using secret key provided above:
+
+![alt text](/images/jwt_validate.png)
+
+Valid token test (we passed JWT Token as `authorizationToken` header):
+
+![alt text](/images/valid_token_test.png)
+
+API Gateway Execution Logs showing the request header with authorizer's response with IAM policy with `Allow`.
+Books Lambda Function and Authorizer function logs will also show success.
+
+![alt text](/images/valid_token_logs.png)
+
+Invalid token test (we passed invlid JWT Token as `authorizationToken` header)
+
+![alt text](/images/invalid_token_test.png)
+
+API Gateway Execution Logs showing the request header with authorizer's response with IAM policy with `Deny`.
+Authorizer function logs will also show failure, and books lambda function will not be invoked.
+
+![alt text](/images/invalid_token_logs.png)
+
+Similar tests can be performed for expired tokens!
 
 ### Cleanup
 Remember to stop AWS components to avoid large bills.
@@ -952,5 +992,7 @@ terraform destroy -auto-approve
 By integrating a Lambda Authorizer with JWT-based authentication and deploying it using Terraform, we can enforce access control on API Gateway endpoints, ensuring only authorized users can access the API. This method is flexible and allows for various authentication mechanisms, including third-party identity providers.
 
 ### References
-1. API Gateway Lambda Authorizer: https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html
-1. JWT Tokens: https://jwt.io/
+1. GitHub Repo: https://github.com/chinmayto/terraform-aws-api-gateway-lambda-authorizer
+2. API Gateway Lambda Authorizer: https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html
+3. JWT Tokens: https://jwt.io/
+4. Online JWT Builder: http://jwtbuilder.jamiekurtz.com/
