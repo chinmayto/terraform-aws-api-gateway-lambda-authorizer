@@ -48,6 +48,12 @@ resource "aws_lambda_function" "lambda_authorizer" {
   source_code_hash = data.archive_file.lambda_authorizer_archive.output_base64sha256
 
   role = aws_iam_role.lambda_authorizer_role.arn
+
+  environment {
+    variables = {
+      JWT_SECRET_KEY = "secret_api_tutorial"
+    }
+  }
 }
 
 ################################################################################

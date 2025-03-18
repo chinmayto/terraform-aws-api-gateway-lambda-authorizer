@@ -103,7 +103,8 @@ resource "aws_api_gateway_method" "GET_all_method" {
   rest_api_id   = aws_api_gateway_rest_api.API-gateway.id
   resource_id   = aws_api_gateway_resource.API-resource-books.id
   http_method   = "GET"
-  authorization = "NONE"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.my_authorizer.id
 }
 
 resource "aws_api_gateway_integration" "GET_all_lambda_integration" {
@@ -159,7 +160,8 @@ resource "aws_api_gateway_method" "POST_method" {
   rest_api_id   = aws_api_gateway_rest_api.API-gateway.id
   resource_id   = aws_api_gateway_resource.API-resource-book.id
   http_method   = "POST"
-  authorization = "NONE"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.my_authorizer.id
 }
 
 resource "aws_api_gateway_integration" "POST_lambda_integration" {
@@ -215,7 +217,8 @@ resource "aws_api_gateway_method" "PATCH_method" {
   rest_api_id   = aws_api_gateway_rest_api.API-gateway.id
   resource_id   = aws_api_gateway_resource.API-resource-book.id
   http_method   = "PATCH"
-  authorization = "NONE"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.my_authorizer.id
 }
 
 resource "aws_api_gateway_integration" "PATCH_lambda_integration" {
@@ -264,7 +267,8 @@ resource "aws_api_gateway_method" "DELETE_method" {
   rest_api_id   = aws_api_gateway_rest_api.API-gateway.id
   resource_id   = aws_api_gateway_resource.API-resource-book.id
   http_method   = "DELETE"
-  authorization = "NONE"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.my_authorizer.id
 }
 
 resource "aws_api_gateway_integration" "DELETE_lambda_integration" {

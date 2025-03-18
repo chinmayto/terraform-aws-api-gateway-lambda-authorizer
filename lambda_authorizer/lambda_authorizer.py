@@ -1,67 +1,49 @@
-# A simple token-based authorizer example to demonstrate how to use an authorization token
-# to allow or deny a request. In this example, the caller named 'user' is allowed to invoke
-# a request if the client-supplied token value is 'allow'. The caller is not allowed to invoke
-# the request if the token value is 'deny'. If the token value is 'unauthorized' or an empty
-# string, the authorizer function returns an HTTP 401 status code. For any other token value,
-# the authorizer returns an HTTP 500 status code.
-# Note that token values are case-sensitive.
-import logging
-import json
 import jwt
-
-SECRET = "qwertyuiopasdfghjklzxcvbnm123456"
+import os
 
 def lambda_handler(event, context):
     try:
-        auth_token = event['authorizationToken']
-        user_details = decode_auth_token(auth_token)
-        if user_details:
-            print('authorized')
-            response = generatePolicy('user', 'Allow', event['methodArn'])
-        else:
-            print('unauthorized')
-            response = generatePolicy('user', 'Deny', event['methodArn'])
+        secret_key = os.environ["JWT_SECRET_KEY"]
+        auth_token = event.get('authorizationToken')
+        if not auth_token:
+            print("Error: No authorization token provided")
+            return generatePolicy("user", "Deny", event.get("methodArn"), "Unauthorized: No token provided")
+
+        user_details = decode_auth_token(auth_token, secret_key)
+
+        if user_details.get('Name') == "Chinmay" and user_details.get('Role') == "api_user":
+            print('Authorized JWT Token')
+            return generatePolicy('user', 'Allow', event['methodArn'], "Authorized : Valid JWT Token")
+
+    except jwt.ExpiredSignatureError:
+        print("Error: Token has expired")
+        return generatePolicy("user", "Deny", event.get("methodArn"), "Error: Token has expired")
+
+    except jwt.InvalidTokenError:
+        print("Error: Invalid token")
+        return generatePolicy("user", "Deny", event.get("methodArn"), "Error: Invalid JWT Token")
 
     except Exception as e:
-        logging.exception(e)
-        return { 'error': f"{type(e).__name__}:{e}"}
+        print(f"Lambda Error: {str(e)}")  # Log exact error
+        return generatePolicy("user", "Deny", event.get("methodArn"), f"Lambda Error: {str(e)}")
 
-    try:
-        return json.loads(response)
-    except BaseException:
-        print('unauthorized')
-        return 'unauthorized'  # Return a 500 error
-
-
-def generatePolicy(principalId, effect, resource):
-    authResponse = {}
-    authResponse['principalId'] = principalId
-    if (effect and resource):
-        policyDocument = {}
-        policyDocument['Version'] = '2012-10-17'
-        policyDocument['Statement'] = []
-        statementOne = {}
-        statementOne['Action'] = 'execute-api:Invoke'
-        statementOne['Effect'] = effect
-        statementOne['Resource'] = resource
-        policyDocument['Statement'] = [statementOne]
-        authResponse['policyDocument'] = policyDocument
-    authResponse['context'] = {
-        "stringKey": "stringval",
-        "numberKey": 123,
-        "booleanKey": True
+def generatePolicy(principalId, effect, resource, message):
+    authResponse = {
+        'principalId': principalId,
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': [{
+                'Action': 'execute-api:Invoke',
+                'Effect': effect,
+                'Resource': resource
+            }]
+        },
+        "context": {
+            "errorMessage": message
+        }
     }
-    authResponse_JSON = json.dumps(authResponse)
-    return authResponse_JSON
+    return authResponse
 
-def decode_auth_token(auth_token: str):
-    try:
-        # remove "Bearer " from the token string.
-        auth_token = auth_token.replace('Bearer ', '')
-        return jwt.decode(jwt=auth_token, key=SECRET, algorithms=["HS256"],options={'verify_signature': False})
-    except jwt.ExpiredSignatureError:
-        'Signature expired. Please log in again.'
-        return
-    except jwt.InvalidTokenError:
-        'Invalid token. Please log in again.'
-        return
+def decode_auth_token(auth_token: str, secret_key: str):
+    auth_token = auth_token.replace('Bearer ', '')
+    return jwt.decode(jwt=auth_token, key=secret_key, algorithms=["HS256"], options={"verify_signature": False, "verify_exp": True})
